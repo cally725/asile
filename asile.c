@@ -6,8 +6,10 @@
 /*
 Game    Room                Device                  WiringPi    Pi Pin  I/O
 
-Asile   Chambre             Bouton Gache Bypass	    0	        11	    Out
-                            Puce Magnet Bypass	    1	        12	    Out
+Asile   Chambre             Phone Box Switch	    0	        11	    In
+                            Phone Magnet     	    1	        12	    Out
+                            Phone Magnet Bypass	    1	        12	    Out
+                            Puce Door Bypass	    11	        26      Out
                             Balance	                2	        13	    Out
                             Balance Bypass	        2	        13	    Out
 					
@@ -27,39 +29,43 @@ Asile   Chambre             Bouton Gache Bypass	    0	        11	    Out
  * Constant definition
  */
 
-#define GACHE_BOUTON_BYPASS     0
-#define PUCE_MAGNET_BYPASS      1
+#define PHONE_BOX_SWITCH        0
+#define PHONE_BOX_MAGNET        1
+#define BYPASS_PHONE_BOX_SWITCH 1
 #define BALANCE_DOOR            2
-#define BALANCE_BAYPASS         2
+#define BYPASS_BALANCE          2
 #define BREAKER_SWITCH          3
-#define BREAKER_SWITCH_BYPASS   4
+#define BYPASS_BREAKER_SWITCH   4
 #define BREAKER_DOOR            4
 #define CAMERA_SWITCHES         5
-#define CAMERA_SWITCHED_BYPASS  6
+#define BYPASS_CAMERA_SWITCHED  6
 #define CAMERA_DOOR             6 
 #define ROCKS_SENSORS           7
-#define ROCKS_SENSORS_BYPASS    10
+#define BYPASS_ROCKS_SENSORS    10
 #define ROCKS_TRAP              10
-#define PILS_WEIGHT_MIN         245.0
-#define PILS_WEIGHT_MAX         255.0
+#define BYPASS_PUCE_DOOR        11
+#define PILS_WEIGHT_MIN         80.0
+#define PILS_WEIGHT_MAX         100.0
     
 /*
  * Variable definition
  */
  
-char gacheButtonBypass[30] = {"GACHE_BOUTON_BYPASS"};
+char phoneBoxSwitchBypass[30] = {"BYPASS_PHONE_BOX_SWITCH"};
+char gacheModuleBypass[30] = {"BYPASS_GACHE_MODULE"};
 time_t gacheButtonBypassTimer = 0;
-char puceMagnetBypass[30] = {"PUCE_MAGNET_BYPASS"};
-time_t puceMagnetBypassTimer = 0;
-char balanceBypass[30] = {"BALANCE_BAYPASS"};
+char puceDoorBypass[30] = {"BYPASS_PUCE_DOOR"};
+time_t puceDoorBypassTimer = 0;
+char balanceBypass[30] = {"BYPASS_BALANCE"};
 time_t balanceDoorTimer = 0;
+time_t balanceStableTimer = 0;
 time_t balanceBypassTimer = 0;
-char breakerSwitchBypass[30] = {"BREAKER_SWITCH_BYPASS"};
+char breakerSwitchBypass[30] = {"BYPASS_BREAKER_SWITCH"};
 time_t breakerSwitchTimer = 0;
 time_t breakerSwitchBypassTimer = 0;
-char cameraSwitchBypass[30] = {"CAMERA_SWITCHED_BYPASS"};
+char cameraSwitchBypass[30] = {"BYPASS_CAMERA_SWITCHE"};
 time_t cameraSwitchBypassTimer = 0;
-char rocksSensorBypass[20] = {"ROCKS_SENSORS_BYPASS"};
+char rocksSensorBypass[20] = {"BYPASS_ROCKS_SENSORS"};
 time_t rocksSensorBypassTimer = 0;
 time_t noTimer = -1;
 
@@ -155,33 +161,45 @@ int main()
     
     wiringPiSetup() ;
   
-    pinMode(GACHE_BOUTON_BYPASS, OUTPUT);
-    pinMode(PUCE_MAGNET_BYPASS, OUTPUT);
+    pinMode(PHONE_BOX_SWITCH, INPUT);
+    pinMode(PHONE_BOX_MAGNET, OUTPUT);
     pinMode(BALANCE_DOOR, OUTPUT);
-    pinMode(BALANCE_BAYPASS, OUTPUT);
+    pinMode(BYPASS_BALANCE, OUTPUT);
     pinMode(BREAKER_SWITCH, INPUT);
-    pinMode(BREAKER_SWITCH_BYPASS, OUTPUT);
+    pinMode(BYPASS_BREAKER_SWITCH, OUTPUT);
     pinMode(BREAKER_DOOR, OUTPUT);
     pinMode(CAMERA_SWITCHES, INPUT);
-    pinMode(CAMERA_SWITCHED_BYPASS, OUTPUT);
+    pinMode(BYPASS_CAMERA_SWITCHED, OUTPUT);
     pinMode(CAMERA_DOOR, OUTPUT);
     pinMode(ROCKS_SENSORS, INPUT);
-    pinMode(ROCKS_SENSORS_BYPASS, OUTPUT);
+    pinMode(BYPASS_ROCKS_SENSORS, OUTPUT);
     pinMode(ROCKS_TRAP, OUTPUT);
+    pinMode(BYPASS_PUCE_DOOR, OUTPUT);
     
-    pullUpDnControl(GACHE_BOUTON_BYPASS, PUD_DOWN);
-    pullUpDnControl(PUCE_MAGNET_BYPASS, PUD_UP);
-    pullUpDnControl(BALANCE_DOOR, PUD_DOWN);
-    pullUpDnControl(BALANCE_BAYPASS, PUD_DOWN);
+    pullUpDnControl(PHONE_BOX_SWITCH, PUD_UP);
+    pullUpDnControl(PHONE_BOX_MAGNET, PUD_UP);
+    digitalWrite(PHONE_BOX_MAGNET, LOW);
+    pullUpDnControl(BALANCE_DOOR, PUD_UP);
+    digitalWrite(BALANCE_DOOR, LOW);
+    pullUpDnControl(BYPASS_BALANCE, PUD_UP);
+    digitalWrite(BYPASS_BALANCE, LOW);
     pullUpDnControl(BREAKER_SWITCH, PUD_UP);
-    pullUpDnControl(BREAKER_SWITCH_BYPASS, PUD_DOWN);
-    pullUpDnControl(BREAKER_DOOR, PUD_DOWN);
+    pullUpDnControl(BYPASS_BREAKER_SWITCH, PUD_UP);
+    digitalWrite(BYPASS_BREAKER_SWITCH, LOW);
+    pullUpDnControl(BREAKER_DOOR, PUD_UP);
+    digitalWrite(BREAKER_DOOR, LOW);
     pullUpDnControl(CAMERA_SWITCHES, PUD_UP);
-    pullUpDnControl(CAMERA_SWITCHED_BYPASS, PUD_UP);
+    pullUpDnControl(BYPASS_CAMERA_SWITCHED, PUD_UP);
+    digitalWrite(BYPASS_CAMERA_SWITCHED, LOW);
     pullUpDnControl(CAMERA_DOOR, PUD_UP);
+    digitalWrite(CAMERA_DOOR, LOW);
     pullUpDnControl(ROCKS_SENSORS, PUD_UP);
-    pullUpDnControl(ROCKS_SENSORS_BYPASS, PUD_UP);
+    pullUpDnControl(BYPASS_ROCKS_SENSORS, PUD_UP);
+    digitalWrite(BYPASS_ROCKS_SENSORS, LOW);
     pullUpDnControl(ROCKS_TRAP, PUD_UP);
+    digitalWrite(ROCKS_TRAP, LOW);
+    pullUpDnControl(BYPASS_PUCE_DOOR, OUTPUT);
+    digitalWrite(BYPASS_PUCE_DOOR, LOW);
     
     while (1)
     {
@@ -204,36 +222,69 @@ int main()
             
             if ((weight > PILS_WEIGHT_MIN) && (weight < PILS_WEIGHT_MAX))
             {
-                TimedActivate(BALANCE_DOOR, HIGH, &balanceDoorTimer);
+                if (balanceStableTimer == 0)
+                {
+                    balanceStableTimer = time(NULL);
+                }
+                else
+                {
+                    time_t curTime = time(NULL);
+                    if ((curTime - balanceStableTimer) > 10)
+                    {
+
+                        //TimedActivate(BALANCE_DOOR, HIGH, &balanceDoorTimer);
+                        digitalWrite(BALANCE_DOOR, HIGH);
+                    }
+                }            
             }
+            else
+            {
+                if (balanceStableTimer != 0)
+                {
+                    balanceStableTimer = 0;
+                }
+            }
+            printf("weight = %lf Oz\n", weight);
         }
-        
+            //printf("toto\n");        
+        // Phone box management
+        // Check if switch was pressed (set to ground)
+        // If closed then release the magnet
+        if (digitalRead(PHONE_BOX_SWITCH) == 0){
+            //TimedActivate(BREAKER_DOOR, LOW, &breakerSwitchTimer);
+            digitalWrite(PHONE_BOX_MAGNET, HIGH);
+            printf("toto");
+        }
+
         // Breaker management
         // Check if braker swith is closed (set to ground)
         // If closed then open the door
         if (digitalRead(BREAKER_SWITCH) == 0)
-            TimedActivate(BREAKER_DOOR, HIGH, &breakerSwitchTimer);
+            //TimedActivate(BREAKER_DOOR, LOW, &breakerSwitchTimer);
+            digitalWrite(BREAKER_DOOR, HIGH);
 
         // Camera management
         // Check if camera swith is closed (set to ground)
         // If closed then open the door
         if (digitalRead(CAMERA_SWITCHES) == 0)
-            digitalWrite(CAMERA_DOOR, LOW);
+            digitalWrite(CAMERA_DOOR, HIGH);
             
         // Rocks management    
         // Check if rocks swith is closed (set to ground)
         // If closed then open the trsp
         if (digitalRead(ROCKS_SENSORS) == 0)
-            digitalWrite(ROCKS_TRAP, LOW);
+            digitalWrite(ROCKS_TRAP, HIGH);
             
         // Bypass management    
         // Check if any of the bypass file exist
-        checkBypass(gacheButtonBypass, GACHE_BOUTON_BYPASS, HIGH, &gacheButtonBypassTimer);
-        checkBypass(puceMagnetBypass, PUCE_MAGNET_BYPASS, LOW, &noTimer);
-        checkBypass(balanceBypass, BALANCE_BAYPASS, HIGH, &balanceBypassTimer);
-        checkBypass(breakerSwitchBypass, BREAKER_SWITCH_BYPASS, HIGH, &breakerSwitchBypassTimer);
-        checkBypass(cameraSwitchBypass, CAMERA_SWITCHED_BYPASS, LOW, &noTimer);
-        checkBypass(rocksSensorBypass, ROCKS_SENSORS_BYPASS, LOW, &noTimer);
+        checkBypass(phoneBoxSwitchBypass, BYPASS_PHONE_BOX_SWITCH, HIGH, &noTimer);
+        checkBypass(puceDoorBypass, BYPASS_PUCE_DOOR, HIGH, &gacheButtonBypassTimer);
+        checkBypass(balanceBypass, BYPASS_BALANCE, HIGH, &noTimer);
+        checkBypass(breakerSwitchBypass, BYPASS_BREAKER_SWITCH, HIGH, &noTimer);
+        checkBypass(cameraSwitchBypass, BYPASS_CAMERA_SWITCHED, HIGH, &noTimer);
+        checkBypass(rocksSensorBypass, BYPASS_ROCKS_SENSORS, HIGH, &noTimer);
+        checkBypass(puceDoorBypass, BYPASS_PUCE_DOOR, HIGH, &noTimer);
+        
     }
   
     closeScale();
