@@ -46,7 +46,7 @@ Asile   Chambre             Phone Box Switch	    0	        11	    In
 #define BYPASS_PUCE_DOOR        11
 #define PILS_WEIGHT_MIN         80.0
 #define PILS_WEIGHT_MAX         100.0
-    
+
 /*
  * Variable definition
  */
@@ -68,6 +68,7 @@ time_t cameraSwitchBypassTimer = 0;
 char rocksSensorBypass[20] = {"BYPASS_ROCKS_SENSORS"};
 time_t rocksSensorBypassTimer = 0;
 time_t noTimer = -1;
+char stopAsile[20] = {"STOP_ASILE"};
 
 /*
  * Function :   checkBypass
@@ -115,6 +116,32 @@ void checkBypass(char *file, int pin, int state, time_t *startTime)
 }
 
 /*
+ * Function :   checkEndRequest
+ * Description: Check if the end file is present
+ *              if it is it means that we need to stop the program
+ * 
+ * Parameters:  file        Name of the file to check
+ *
+ * Return       No return value
+ * 
+ */
+int checkEndRequest(char *file)
+{
+	FILE *file1;
+    
+
+	file1 = fopen(file, "rb");
+	if (file1)
+	{
+        return 1;
+	}
+    else
+    {
+        return 0;
+    }
+}
+
+/*
  * Function :   TimedActivate
  * Description: Activate n IO pin for 10 seconds1
  * 
@@ -145,6 +172,18 @@ void TimedActivate(int pin, int state, time_t *startTime)
             }
     }
 }
+
+void cleanUpFiles()
+{
+    remove("BYPASS_PHONE_BOX_SWITCH");
+    remove("BYPASS_GACHE_MODULE");
+    remove("BYPASS_PUCE_DOOR");
+    remove("BYPASS_BALANCE");
+    remove("BYPASS_BREAKER_SWITCH");
+    remove("BYPASS_CAMERA_SWITCHE");
+    remove("BYPASS_ROCKS_SENSORS");  
+    remove("STOP_ASILE");
+}
  
 /*
  * Function :   main
@@ -157,6 +196,8 @@ void TimedActivate(int pin, int state, time_t *startTime)
  */  
 int main() 
 {    
+    cleanUpFiles();
+    
     int initScaleDone = 0;
     
     wiringPiSetup() ;
@@ -201,7 +242,7 @@ int main()
     pullUpDnControl(BYPASS_PUCE_DOOR, OUTPUT);
     digitalWrite(BYPASS_PUCE_DOOR, LOW);
     
-    while (1)
+    while (!checkEndRequest(stopAsile))
     {
         // Scale management
         if (initScaleDone == 0)
@@ -287,7 +328,14 @@ int main()
         
     }
   
-    closeScale();
+    //closeScale();
+    
+    digitalWrite(PHONE_BOX_MAGNET, HIGH);
+    digitalWrite(BALANCE_DOOR, HIGH);
+    digitalWrite(BREAKER_DOOR, HIGH);
+    digitalWrite(CAMERA_DOOR, HIGH);
+    digitalWrite(ROCKS_TRAP, HIGH);
+    digitalWrite(BYPASS_PUCE_DOOR, HIGH);
     
     return 0;
 }
