@@ -23,6 +23,7 @@ Asile   Chambre             Phone Box Switch	    0	        11	    In
                             Rocks Sensors	        7	        7	    In 
                             Rocks Sensors Bypass	10	        24	    Out
                             Rocks Trap	            10	        24	    Out    
+                            Balance LEDs            12          19      Out
 */
 
 /*
@@ -44,8 +45,12 @@ Asile   Chambre             Phone Box Switch	    0	        11	    In
 #define BYPASS_ROCKS_SENSORS    10
 #define ROCKS_TRAP              10
 #define BYPASS_PUCE_DOOR        11
-#define PILS_WEIGHT_MIN         80.0
-#define PILS_WEIGHT_MAX         100.0
+#define BALANCE_LEDS            12
+
+#define PILS_WEIGHT_GR_MIN         90.0
+#define PILS_WEIGHT_GR_MAX         94.0
+#define PILS_WEIGHT_OZ_MIN         3.1
+#define PILS_WEIGHT_OZ_MAX         3.3
 
 /*
  * Variable definition
@@ -63,9 +68,9 @@ time_t balanceBypassTimer = 0;
 char breakerSwitchBypass[30] = {"BYPASS_BREAKER_SWITCH"};
 time_t breakerSwitchTimer = 0;
 time_t breakerSwitchBypassTimer = 0;
-char cameraSwitchBypass[30] = {"BYPASS_CAMERA_SWITCHE"};
+char cameraSwitchBypass[30] = {"BYPASS_CAMERA_SWITCH"};
 time_t cameraSwitchBypassTimer = 0;
-char rocksSensorBypass[20] = {"BYPASS_ROCKS_SENSORS"};
+char rocksSensorBypass[30] = {"BYPASS_ROCKS_SENSORS"};
 time_t rocksSensorBypassTimer = 0;
 time_t noTimer = -1;
 char stopAsile[20] = {"STOP_ASILE"};
@@ -93,7 +98,15 @@ void checkBypass(char *file, int pin, int state, time_t *startTime)
 	{
         if (*startTime == noTimer)
         {
-            digitalWrite(pin, state);
+            if (pin == BYPASS_BALANCE)
+            {
+                digitalWrite(pin, state);
+                digitalWrite(BALANCE_LEDS, LOW);
+            }
+            else
+            {
+                digitalWrite(pin, state);
+            }
         }
         else if (*startTime == 0)
         {
@@ -112,9 +125,67 @@ void checkBypass(char *file, int pin, int state, time_t *startTime)
 
                 }
         }
+        fclose(file1);
 	}
 }
 
+/*
+ * Function :   ToggleDoor
+ * Description: Activate n IO pin for 10 seconds1
+ * 
+ * Parameters:  pin         Pin to drive for the bypass
+ *              state       State of the pin to set
+ *              startTime   Needed when a 10 second delay is required before restoring initial value
+ *
+ * Return       No return value
+ * 
+ *
+void ToggleDoor(int pin, int state, time_t *startTime)
+{
+
+    if (*startTime == 0)
+    {
+        *startTime = time(NULL);
+        digitalWrite(pin, state);
+    }
+    else
+    {
+        time_t curTime = time(NULL);
+        state = digitalRead(pin);
+        if ((curTime - *startTime) > 5)
+            {
+            }
+        else if ((curTime - *startTime) > 4)
+            {
+                if (state == LOW)
+                    digitalWrite(pin, HIGH);
+                else
+                    digitalWrite(pin, LOW);
+            }
+        else if ((curTime - *startTime) > 3)
+            {
+                if (state == LOW)
+                    digitalWrite(pin, HIGH);
+                else
+                    digitalWrite(pin, LOW);
+            }
+        else if ((curTime - *startTime) > 2)
+            {
+                if (state == LOW)
+                    digitalWrite(pin, HIGH);
+                else
+                    digitalWrite(pin, LOW);
+            }
+        else if ((curTime - *startTime) > 1)
+            {
+                if (state == LOW)
+                    digitalWrite(pin, HIGH);
+                else
+                    digitalWrite(pin, LOW);
+            }
+    }
+}
+*/
 /*
  * Function :   checkEndRequest
  * Description: Check if the end file is present
@@ -133,6 +204,7 @@ int checkEndRequest(char *file)
 	file1 = fopen(file, "rb");
 	if (file1)
 	{
+        fclose(file1);
         return 1;
 	}
     else
@@ -180,7 +252,7 @@ void cleanUpFiles()
     remove("BYPASS_PUCE_DOOR");
     remove("BYPASS_BALANCE");
     remove("BYPASS_BREAKER_SWITCH");
-    remove("BYPASS_CAMERA_SWITCHE");
+    remove("BYPASS_CAMERA_SWITCH");
     remove("BYPASS_ROCKS_SENSORS");  
     remove("STOP_ASILE");
 }
@@ -205,6 +277,7 @@ int main()
     pinMode(PHONE_BOX_SWITCH, INPUT);
     pinMode(PHONE_BOX_MAGNET, OUTPUT);
     pinMode(BALANCE_DOOR, OUTPUT);
+    pinMode(BALANCE_LEDS, OUTPUT);
     pinMode(BYPASS_BALANCE, OUTPUT);
     pinMode(BREAKER_SWITCH, INPUT);
     pinMode(BYPASS_BREAKER_SWITCH, OUTPUT);
@@ -222,6 +295,8 @@ int main()
     digitalWrite(PHONE_BOX_MAGNET, LOW);
     pullUpDnControl(BALANCE_DOOR, PUD_UP);
     digitalWrite(BALANCE_DOOR, LOW);
+    pullUpDnControl(BALANCE_LEDS, PUD_UP);
+    digitalWrite(BALANCE_LEDS, HIGH);
     pullUpDnControl(BYPASS_BALANCE, PUD_UP);
     digitalWrite(BYPASS_BALANCE, LOW);
     pullUpDnControl(BREAKER_SWITCH, PUD_UP);
@@ -261,7 +336,8 @@ int main()
             if (weight == -1.0)
                 initScaleDone = 0;
             
-            if ((weight > PILS_WEIGHT_MIN) && (weight < PILS_WEIGHT_MAX))
+            if (((weight >= PILS_WEIGHT_GR_MIN) && (weight <= PILS_WEIGHT_GR_MAX)) ||
+                ((weight >= PILS_WEIGHT_OZ_MIN) && (weight <= PILS_WEIGHT_OZ_MAX)))
             {
                 if (balanceStableTimer == 0)
                 {
@@ -270,11 +346,12 @@ int main()
                 else
                 {
                     time_t curTime = time(NULL);
-                    if ((curTime - balanceStableTimer) > 10)
+                    if ((curTime - balanceStableTimer) > 3)
                     {
 
                         //TimedActivate(BALANCE_DOOR, HIGH, &balanceDoorTimer);
                         digitalWrite(BALANCE_DOOR, HIGH);
+                        digitalWrite(BALANCE_LEDS, LOW);
                     }
                 }            
             }
@@ -332,6 +409,7 @@ int main()
     
     digitalWrite(PHONE_BOX_MAGNET, HIGH);
     digitalWrite(BALANCE_DOOR, HIGH);
+    digitalWrite(BALANCE_LEDS, HIGH);
     digitalWrite(BREAKER_DOOR, HIGH);
     digitalWrite(CAMERA_DOOR, HIGH);
     digitalWrite(ROCKS_TRAP, HIGH);
